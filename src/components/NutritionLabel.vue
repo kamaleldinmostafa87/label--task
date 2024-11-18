@@ -1,272 +1,315 @@
 <!-- NutritionLabel.vue -->
 <template>
-  <div class="nutrition-facts">
-    <div class="header">
-      <!-- <h1>{{ 'Nutrition Facts' }}</h1> -->
+  <div class="nutrition-facts-container">
+    <!-- Main Nutrition Label -->
+    <div class="nutrition-label">
+      <div class="label-container">
+        <h1 class="label-title">Nutrition Facts</h1>
 
-      <!-- Serving Information -->
-      <div class="serving-info">
-        <div>
-          {{ servingsPerContainer }}
-        </div>
-        <div class="serving-size">
-          {{ servingSize }}
-        </div>
-      </div>
-    </div>
-
-    <!-- Calories -->
-    <div class="calories">
-      <div class="calories-label">'Calories'</div>
-      <div class="calories-value">{{ Math.round(calories) }}</div>
-    </div>
-
-    <!-- Daily Value Notice -->
-    <div class="daily-value-header">
-      <!-- <div>% {{ isArabic ? 'القيمة اليومية*' : 'Daily Value*' }}</div> -->
-    </div>
-
-    <!-- Nutrients -->
-    <div class="nutrients">
-      <!-- <template v-for="(section, sectionIndex) in groupedNutrients">
-        <div :key="sectionIndex" class="nutrient-section">
-          <div
-            v-for="nutrient in section"
-            :key="nutrient.id"
-            class="nutrient-row"
-            v-show="selectedNutrients[nutrient.id]"
-            :style="{ paddingLeft: `${nutrient.indentation * 20}px` }"
-          >
-            <div class="nutrient-name">{{ nutrient.name }}</div>
-            <div class="nutrient-value">
-              {{ Math.round(nutrient.value) }}{{ nutrient.unit || 'g' }}
-            </div>
-            <div class="daily-value" v-if="nutrient.dailyValue">
-              {{ Math.round((nutrient.value / nutrient.dailyValue) * 100) }}%
-            </div>
+        <!-- Servings Information -->
+        <div class="servings-info">
+          <p>{{ label.amounts.servingsPerContainer }} servings per container</p>
+          <div class="serving-size">
+            <span class="bold">Serving size</span>
+            <span>{{ label.amounts.servingSize }}</span>
           </div>
         </div>
-      </template> -->
-    </div>
 
-    <!-- Disclaimer -->
-    <div class="disclaimer">
-      <p>
-        'The % Daily Value (DV) tells you how much a nutrient in a serving of
-        food contributes to a daily diet. 2,000 calories a day is used for
-        general nutrition advice.'
-      </p>
+        <!-- Calories -->
+        <div class="calories-container">
+          <div class="calories-row">
+            <span class="calories-label">Calories</span>
+            <span class="calories-value">{{
+              Object.values(label.serving).find(
+                (item) => item.name === "Calories"
+              ).value
+            }}</span>
+          </div>
+        </div>
+
+        <!-- Daily Value Header -->
+        <div class="daily-value-header">
+          <span>% Daily Value*</span>
+        </div>
+
+        <div v-for="section in getSortedSections" :key="section">
+          <div class="flex justify-between">
+            <div>
+              <span>
+                {{ section.name }}
+              </span>
+
+              <span
+                >{{ Math.round(section.value) }}
+                {{
+                  section.unit !== null ? Math.round(section.unit.grams) : "g"
+                }}</span
+              >
+            </div>
+
+            <div>{{ section.daily_value }} %</div>
+          </div>
+        </div>
+
+        <!-- Nutrients Sections -->
+        <!--<div
+          v-for="section in getSortedSections"
+          :key="section"
+          class="nutrient-section"
+        >
+          <div
+            v-for="nutrient in getNutrientsBySection(section)"
+            :key="nutrient.name"
+            class="nutrient-row"
+            v-show="visibleNutrients[nutrient.name]"
+            :style="getIndentationStyle(nutrient)"
+          >
+            <span class="nutrient-name">{{ nutrient.name }}</span>
+            <div class="nutrient-values">
+              <span class="amount">
+                {{ formatValue(nutrient.value) }}{{ nutrient.unit || "g" }}
+              </span>
+              <span v-if="nutrient.daily_value" class="daily-value">
+                {{ calculateDailyValue(nutrient) }}
+              </span>
+            </div>
+          </div>
+        </div> -->
+
+        <!-- Disclaimer -->
+        <div class="disclaimer">
+          * The % Daily Value tells you how much a nutrient in a serving of food
+          contributes to a daily diet. 2,000 calories a day is used for general
+          nutrition advice.
+        </div>
+      </div>
     </div>
 
     <!-- Nutrient Toggle Controls -->
-    <div class="nutrient-toggles">
-      <h3>'Customize Nutrients'</h3>
-      <div
-        v-for="nutrient in allNutrients"
-        :key="nutrient.id"
-        class="toggle-row"
-      >
-        <label>
-          <input type="checkbox" v-model="selectedNutrients[nutrient.id]" />
+    <div class="nutrient-controls">
+      <h2>Customize Visible Nutrients</h2>
+      <div class="toggle-container">
+        <label
+          v-for="nutrient in label.serving"
+          :key="nutrient.name"
+          class="toggle-label"
+        >
+          <input type="checkbox" v-model="visibleNutrients[nutrient.name]" />
           {{ nutrient.name }}
         </label>
       </div>
-    </div>
-
-    <!-- Language Toggle -->
-    <div class="language-toggle">
-      <button @click="toggleLanguage">
-        <!-- {{ isArabic ? 'Switch to English' : 'التبديل إلى العربية' }} -->
-      </button>
     </div>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'NutritionLabel',
+  name: "NutritionLabel",
+
+  props: {
+    label: {
+      type: Object,
+      required: true,
+      // default: () => ({
+      //   amounts: {
+      //     servingsPerContainer: 0,
+      //     servingSize: "",
+      //   },
+      //   serving: [],
+      //   daily_values: {},
+      // }),
+    },
+  },
+
   data() {
     return {
-      isArabic: false,
-      servingsPerContainer: '8',
-      servingSize: '2/3 cup (55g)',
-      calories: 230,
-      selectedNutrients: {},
-      // Sample nutrient data - replace with API data
-      nutrients: [
-        {
-          id: 1,
-          name: 'Total Fat',
-          value: 8,
-          unit: 'g',
-          dailyValue: 78,
-          enabled: 1,
-          section: 1,
-          order: 1,
-          indentation: 0,
-        },
-        {
-          id: 2,
-          name: 'Saturated Fat',
-          value: 1,
-          unit: 'g',
-          dailyValue: 20,
-          enabled: 1,
-          section: 1,
-          order: 2,
-          indentation: 1,
-        },
-        // Add more nutrients as needed
-      ],
+      visibleNutrients: {},
+      isRTL: false,
     };
   },
+
   computed: {
-    allNutrients() {
-      console.log(this.nutrients);
-      return this.nutrients;
-    },
-    groupedNutrients() {
-      const grouped = {};
-      this.nutrients.forEach((nutrient) => {
-        if (!grouped[nutrient.section]) {
-          grouped[nutrient.section] = [];
-        }
-        grouped[nutrient.section].push(nutrient);
-      });
+    // getCalories() {
+    //   const caloriesNutrient = this.label.serving.find(
+    //     (n) => n.name === "Calories"
+    //   );
+    //   return this.formatValue(caloriesNutrient?.value || 0);
+    // },
 
-      // Sort nutrients within each section
-      Object.values(grouped).forEach((section) => {
-        section.sort((a, b) => a.order - b.order);
-      });
-
-      return grouped;
+    getSortedSections() {
+      //remove repeated values if exist
+      const sections = new Set(Object.values(this.label.serving));
+      //get enabled only
+      return [...sections].filter((section) => section.enabled === 1);
     },
   },
+
   methods: {
-    initializeSelectedNutrients() {
-      this.nutrients.forEach((nutrient) => {
-        this.$set(this.selectedNutrients, nutrient.id, nutrient.enabled === 1);
-      });
+    formatValue(value) {
+      return Math.round(value);
+    },
+
+    getNutrientsBySection(section) {
+      return this.label.serving.filter((n) => n.section === section);
+      // .sort((a, b) => a.order - b.order);
+    },
+
+    calculateDailyValue(nutrient) {
+      if (!nutrient.daily_value) return null;
+      return this.formatValue((nutrient.value / nutrient.daily_value) * 100);
+    },
+
+    getIndentationStyle(nutrient) {
+      return nutrient.indentation
+        ? { marginLeft: `${nutrient.indentation * 20}px` }
+        : {};
+    },
+
+    initializeVisibleNutrients() {
+      //   this.visibleNutrients = Object.values(this.label.serving).reduce(
+      //     (acc, nutrient) => {
+      //       acc[nutrient.name] = nutrient.enabled === 1;
+      //       return acc;
+      //     },
+      //     {}
+      //   );
+      this.visibleNutrients = Object.values(this.label.serving);
+
+      // console.log(
+      //   Array.from(Object.entries(this.label.serving), ([key, value]) => {
+      //     return value;
+      //   })
+      // );
+      const sections = new Set(
+        Array.from(Object.entries(this.label.serving), ([key, value]) => {
+          return value;
+        })
+      );
+      console.log(sections);
     },
   },
+
   created() {
-    this.initializeSelectedNutrients();
+    this.initializeVisibleNutrients();
   },
 };
 </script>
 
 <style scoped>
-.nutrition-facts {
-  font-family: 'Roboto', sans-serif;
-  max-width: 300px;
-  padding: 0.5rem;
-  border: 1px solid #000;
+.nutrition-facts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  font-family: "Roboto", sans-serif;
 }
 
-.rtl {
-  direction: rtl;
-  font-family: 'Noto Sans Arabic', sans-serif;
+.nutrition-label {
+  width: 320px;
+  background: white;
+  padding: 1rem;
 }
 
-.header {
-  border-bottom: 10px solid #000;
-  padding-bottom: 0.5rem;
+.label-container {
+  border: 2px solid black;
+  padding: 1rem;
 }
 
-.header h1 {
+.label-title {
   font-size: 2rem;
-  margin: 0;
-  padding: 0;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
 }
 
-.serving-info {
-  font-size: 1.2rem;
-  margin-top: 0.5rem;
+.servings-info {
+  border-bottom: 8px solid black;
+  padding: 0.5rem 0;
 }
 
 .serving-size {
-  font-size: 1.4rem;
-  font-weight: bold;
-}
-
-.calories {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+}
+
+.calories-container {
+  border-bottom: 8px solid black;
   padding: 0.5rem 0;
-  border-bottom: 4px solid #000;
+}
+
+.calories-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
 }
 
 .calories-label {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
+  font-weight: bold;
 }
 
 .calories-value {
-  font-size: 2rem;
+  font-size: 2.5rem;
   font-weight: bold;
 }
 
 .daily-value-header {
-  font-size: 0.9rem;
-  border-bottom: 1px solid #000;
-  padding: 0.3rem 0;
+  text-align: right;
+  font-size: 0.875rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid black;
 }
 
 .nutrient-section {
-  border-bottom: 4px solid #000;
+  border-top: 2px solid black;
+  padding: 0.5rem 0;
 }
 
 .nutrient-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.2rem 0;
-  border-bottom: 1px solid #000;
+  padding: 0.25rem 0;
 }
 
-.nutrient-name {
-  flex: 2;
+.nutrient-values {
+  display: flex;
+  gap: 1rem;
 }
 
-.nutrient-value {
-  flex: 1;
-  text-align: right;
-}
-
-.daily-value {
-  flex: 1;
-  text-align: right;
+.bold {
+  font-weight: bold;
 }
 
 .disclaimer {
-  font-size: 0.8rem;
-  margin-top: 0.5rem;
-}
-
-.nutrient-toggles {
-  margin-top: 2rem;
-  padding: 1rem;
-  border: 1px solid #ccc;
-}
-
-.toggle-row {
-  margin: 0.5rem 0;
-}
-
-.language-toggle {
+  font-size: 0.75rem;
   margin-top: 1rem;
-  text-align: center;
 }
 
-button {
-  padding: 0.5rem 1rem;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.nutrient-controls {
+  padding: 1rem;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-button:hover {
-  background-color: #0056b3;
+.nutrient-controls h2 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.toggle-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* RTL Support */
+.rtl {
+  direction: rtl;
 }
 </style>
