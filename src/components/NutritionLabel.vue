@@ -1,102 +1,119 @@
 <!-- NutritionLabel.vue -->
 <template>
-  <div class="nutrition-facts-container">
-    <!-- Main Nutrition Label -->
+  <div
+    class="nutrition-facts-container"
+    :dir="currentLanguage === 'ar' ? 'rtl' : 'ltr'"
+  >
     <div class="nutrition-label">
       <div class="label-container">
-        <h1 class="label-title">Nutrition Facts</h1>
+        <h1 class="label-title">
+          {{ currentLanguage === "ar" ? "حقائق غذائية" : "Nutrition Facts" }}
+        </h1>
 
         <!-- Servings Information -->
         <div class="servings-info">
-          <p>{{ label.amounts.servingsPerContainer }} servings per container</p>
+          <p>
+            {{ label.amounts.number_of_servings }}
+            {{
+              currentLanguage === "ar"
+                ? "حصة في العبوة"
+                : "servings per container"
+            }}
+          </p>
           <div class="serving-size">
-            <span class="bold">Serving size</span>
-            <span>{{ label.amounts.servingSize }}</span>
+            <span class="bold">{{
+              currentLanguage === "ar" ? "حجم الحصة" : "Serving size"
+            }}</span>
+            <span>{{ formatServingSize }}</span>
           </div>
         </div>
 
-        <!-- Calories -->
+        <!-- Energy Section -->
         <div class="calories-container">
-          <div class="calories-row">
-            <span class="calories-label">Calories</span>
-            <span class="calories-value">{{
-              Object.values(label.serving).find(
-                (item) => item.name === "Calories"
-              ).value
+          <div
+            v-for="(nutrient, key) in energyNutrients"
+            :key="key"
+            class="energy-row"
+          >
+            <span class="energy-label">{{
+              getCurrentLanguageName(nutrient)
             }}</span>
+
+            <span>
+              {{ formatValue(nutrient?.value) }}
+              {{ nutrient?.unit?.name }}</span
+            >
           </div>
         </div>
 
         <!-- Daily Value Header -->
         <div class="daily-value-header">
-          <span>% Daily Value*</span>
+          <span>{{
+            currentLanguage === "ar" ? "% القيمة اليومية*" : "% Daily Value*"
+          }}</span>
         </div>
 
-        <div v-for="section in getSortedSections" :key="section">
-          <div class="flex justify-between">
-            <div>
-              <span>
-                {{ section.name }}
-              </span>
-
-              <span
-                >{{ Math.round(section.value) }}
-                {{
-                  section.unit !== null ? Math.round(section.unit.grams) : "g"
-                }}</span
-              >
-            </div>
-
-            <div>{{ section.daily_value }} %</div>
-          </div>
-        </div>
-
-        <!-- Nutrients Sections -->
-        <!--<div
-          v-for="section in getSortedSections"
-          :key="section"
-          class="nutrient-section"
-        >
+        <!-- Nutrients -->
+        <div class="nutrients-container">
           <div
-            v-for="nutrient in getNutrientsBySection(section)"
-            :key="nutrient.name"
+            v-for="(nutrient, key) in sortedNutrients"
+            :key="key"
             class="nutrient-row"
-            v-show="visibleNutrients[nutrient.name]"
+            v-show="nutrient.enabled"
             :style="getIndentationStyle(nutrient)"
           >
-            <span class="nutrient-name">{{ nutrient.name }}</span>
+            <span class="nutrient-name">{{
+              getCurrentLanguageName(nutrient)
+            }}</span>
             <div class="nutrient-values">
               <span class="amount">
-                {{ formatValue(nutrient.value) }}{{ nutrient.unit || "g" }}
+                {{ Math.round(nutrient.value) }}
+                {{ nutrient?.unit?.name || "g" }}
               </span>
-              <span v-if="nutrient.daily_value" class="daily-value">
-                {{ calculateDailyValue(nutrient) }}
+              <span v-if="getDailyValue(key)" class="daily-value-percent">
+                {{ calculateDailyValue(key, nutrient.value) }}%
               </span>
             </div>
           </div>
-        </div> -->
+        </div>
 
         <!-- Disclaimer -->
         <div class="disclaimer">
-          * The % Daily Value tells you how much a nutrient in a serving of food
-          contributes to a daily diet. 2,000 calories a day is used for general
-          nutrition advice.
+          {{
+            currentLanguage === "ar"
+              ? "* النسبة المئوية للقيمة اليومية تخبرك عن مقدار المغذيات في حصة من الطعام التي تساهم في النظام الغذائي اليومي. 2000 سعرة حرارية في اليوم تستخدم للنصائح الغذائية العامة."
+              : "* The % Daily Value tells you how much a nutrient in a serving of food contributes to a daily diet. 2,000 calories a day is used for general nutrition advice."
+          }}
         </div>
       </div>
     </div>
 
-    <!-- Nutrient Toggle Controls -->
-    <div class="nutrient-controls">
-      <h2>Customize Visible Nutrients</h2>
-      <div class="toggle-container">
-        <label
-          v-for="nutrient in label.serving"
-          :key="nutrient.name"
-          class="toggle-label"
-        >
-          <input type="checkbox" v-model="visibleNutrients[nutrient.name]" />
-          {{ nutrient.name }}
-        </label>
+    <!-- Language Toggle -->
+    <div class="controls-section">
+      <button @click="toggleLanguage" class="language-toggle">
+        {{ currentLanguage === "en" ? "عربي" : "English" }}
+      </button>
+
+      <!-- Nutrient Toggle Controls -->
+      <div class="nutrient-controls">
+        <h2>
+          {{
+            currentLanguage === "ar"
+              ? "تخصيص المغذيات المرئية"
+              : "Customize Visible Nutrients"
+          }}
+        </h2>
+        <div class="toggle-container">
+          <label
+            v-for="(nutrient, key) in label.serving"
+            :key="key"
+            class="toggle-label"
+          >
+            {{ console.log(label.serving) }}
+            <input type="checkbox" @change="toggleNutrient(key)" />
+            {{ getCurrentLanguageName(nutrient) }}
+          </label>
+        </div>
       </div>
     </div>
   </div>
@@ -110,37 +127,51 @@ export default {
     label: {
       type: Object,
       required: true,
-      // default: () => ({
-      //   amounts: {
-      //     servingsPerContainer: 0,
-      //     servingSize: "",
-      //   },
-      //   serving: [],
-      //   daily_values: {},
-      // }),
     },
   },
 
   data() {
     return {
-      visibleNutrients: {},
-      isRTL: false,
+      currentLanguage: "en",
     };
   },
 
   computed: {
-    // getCalories() {
-    //   const caloriesNutrient = this.label.serving.find(
-    //     (n) => n.name === "Calories"
-    //   );
-    //   return this.formatValue(caloriesNutrient?.value || 0);
-    // },
+    energyNutrients() {
+      return (
+        Object.entries(this.label.serving)
+          //[[key,value],[key,value]]
+          .filter(([key]) => key.includes("Energy"))
+          //[[key,value]]
+          .reduce((acc, [key, value]) => {
+            // {key: value}
+            acc[key] = value;
+            return acc;
+          }, {})
+      );
+    },
 
-    getSortedSections() {
-      //remove repeated values if exist
-      const sections = new Set(Object.values(this.label.serving));
-      //get enabled only
-      return [...sections].filter((section) => section.enabled === 1);
+    sortedNutrients() {
+      return (
+        Object.entries(this.label.serving)
+          .filter(([key]) => !key.includes("Energy"))
+          .sort((a, b) => {
+            // Sort by section first, then by order
+            if (a[1].section !== b[1].section) {
+              return a[1].section - b[1].section;
+            }
+            return a[1].order - b[1].order;
+          })
+          //sorted array then get the object will be iterated using for..in
+          .reduce((acc, [key, value]) => {
+            acc[key] = value;
+            return acc;
+          }, {})
+      );
+    },
+
+    formatServingSize() {
+      return `${this.label.amounts.serving}g`;
     },
   },
 
@@ -148,76 +179,66 @@ export default {
     formatValue(value) {
       return Math.round(value);
     },
-
-    getNutrientsBySection(section) {
-      return this.label.serving.filter((n) => n.section === section);
-      // .sort((a, b) => a.order - b.order);
+    compare(a, b) {
+      return a - b;
+    },
+    getCurrentLanguageName(nutrient) {
+      return this.currentLanguage === "ar" ? nutrient.name_ar : nutrient.name;
     },
 
-    calculateDailyValue(nutrient) {
-      if (!nutrient.daily_value) return null;
-      return this.formatValue((nutrient.value / nutrient.daily_value) * 100);
+    getDailyValue(nutrientName) {
+      return this.label.daily_value[nutrientName] || 0;
+    },
+
+    calculateDailyValue(nutrientName, value) {
+      const dailyValue = this.getDailyValue(nutrientName);
+      if (!dailyValue) return 0;
+      return this.formatValue((value / dailyValue) * 100);
     },
 
     getIndentationStyle(nutrient) {
-      return nutrient.indentation
-        ? { marginLeft: `${nutrient.indentation * 20}px` }
+      return nutrient.indentations
+        ? { marginLeft: `${nutrient.indentations * 20}px` }
         : {};
     },
 
-    initializeVisibleNutrients() {
-      //   this.visibleNutrients = Object.values(this.label.serving).reduce(
-      //     (acc, nutrient) => {
-      //       acc[nutrient.name] = nutrient.enabled === 1;
-      //       return acc;
-      //     },
-      //     {}
-      //   );
-      this.visibleNutrients = Object.values(this.label.serving);
-
-      // console.log(
-      //   Array.from(Object.entries(this.label.serving), ([key, value]) => {
-      //     return value;
-      //   })
-      // );
-      const sections = new Set(
-        Array.from(Object.entries(this.label.serving), ([key, value]) => {
-          return value;
-        })
-      );
-      console.log(sections);
+    toggleLanguage() {
+      this.currentLanguage = this.currentLanguage === "en" ? "ar" : "en";
     },
-  },
 
-  created() {
-    this.initializeVisibleNutrients();
+    toggleNutrient(nutrientKey) {
+      this.$set(
+        this.label.serving[nutrientKey],
+        "enabled",
+        !this.label.serving[nutrientKey].enabled
+      );
+    },
   },
 };
 </script>
 
 <style scoped>
 .nutrition-facts-container {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
   font-family: "Roboto", sans-serif;
+  max-width: 380px;
+  margin: 0 auto;
 }
 
 .nutrition-label {
-  width: 320px;
   background: white;
   padding: 1rem;
+  margin-bottom: 2rem;
 }
 
 .label-container {
   border: 2px solid black;
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .label-title {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .servings-info {
@@ -228,6 +249,7 @@ export default {
 .serving-size {
   display: flex;
   justify-content: space-between;
+  font-size: 1.2rem;
 }
 
 .calories-container {
@@ -235,38 +257,34 @@ export default {
   padding: 0.5rem 0;
 }
 
-.calories-row {
+.energy-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  margin: 0.25rem 0;
 }
 
-.calories-label {
-  font-size: 1.25rem;
+.energy-label {
+  font-size: 1.2rem;
   font-weight: bold;
 }
 
-.calories-value {
-  font-size: 2.5rem;
+.energy-value {
+  font-size: 2rem;
   font-weight: bold;
 }
 
 .daily-value-header {
   text-align: right;
-  font-size: 0.875rem;
   padding: 0.25rem 0;
   border-bottom: 1px solid black;
-}
-
-.nutrient-section {
-  border-top: 2px solid black;
-  padding: 0.5rem 0;
 }
 
 .nutrient-row {
   display: flex;
   justify-content: space-between;
   padding: 0.25rem 0;
+  border-bottom: 1px solid #ddd;
 }
 
 .nutrient-values {
@@ -274,31 +292,29 @@ export default {
   gap: 1rem;
 }
 
-.bold {
-  font-weight: bold;
+.controls-section {
+  padding: 1rem;
+  background: #f5f5f5;
+  border-radius: 8px;
 }
 
-.disclaimer {
-  font-size: 0.75rem;
-  margin-top: 1rem;
+.language-toggle {
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .nutrient-controls {
-  padding: 1rem;
-  background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.nutrient-controls h2 {
-  font-size: 1.25rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
+  margin-top: 1rem;
 }
 
 .toggle-container {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 0.5rem;
 }
 
@@ -308,8 +324,12 @@ export default {
   gap: 0.5rem;
 }
 
-/* RTL Support */
-.rtl {
-  direction: rtl;
+.disclaimer {
+  font-size: 0.75rem;
+  margin-top: 1rem;
+}
+
+[dir="rtl"] {
+  font-family: "Noto Sans Arabic", sans-serif;
 }
 </style>

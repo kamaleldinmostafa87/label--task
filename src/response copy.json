@@ -1,0 +1,80 @@
+{
+  "label": {
+    "daily_value": {
+      "Protein": 22.11,
+      "Total Fat": 120.77,
+      "Total Carbohydrates": 8.4,
+      "Dietary Fiber": 7.39,
+      "Calcium": 40.45,
+      "Iron": 20.07,
+      "Magnesium": 81.98,
+      "Phosphorus": 71.1,
+      "Potassium": 22.6,
+      "Sodium": 6.49,
+      "Zinc": 42.23,
+      "Copper": 116.47,
+      "Manganese": 107.99,
+      "Selenium": 24.06,
+      "Vitamin A, RAE": 17.48,
+      "Vitamin E": 11.71,
+      "Vitamin D": 1.69,
+      "Vitamin C": 0.8,
+      "Thiamin (B1)": 83.8,
+      "Riboflavin (B2)": 51.95,
+      "Niacin (B3)": 23.83,
+      "Pantothenic acid": 97.33,
+      "Vitamin B6": 20.26,
+      "Vitamin B12": 63.38,
+      "Vitamin K": 0.85,
+      "Folate DFE": 24.33,
+      "Cholesterol": 11.27,
+      "Saturated Fat": 181.3,
+      "Soluble Fiber": 0,
+      "Insoluble Fiber": 0,
+      "Chloride": 0,
+      "Chromium": 0,
+      "Iodine": 0,
+      "Molybdenum": 0,
+      "Biotin": 0,
+      "Trans Fat": 0,
+      "Added Sugars": 0
+    },
+    "amounts": {
+      "recipe": 450,
+      "package": 450,
+      "serving": 450,
+      "number_of_servings": 1,
+      "recipe_moisture_loss": 0
+    },
+    "servings": {
+      "Energy KJ": {
+        "id": 22,
+        "name": "Energy KJ",
+        "name_ar": "طاقة",
+        "name_es": "Energía KJ",
+        "daily_value": 0,
+        "deleted_at": null,
+        "created_at": "2020-10-10T18:06:50.000000Z",
+        "updated_at": "2024-10-29T09:47:03.000000Z",
+        "ri_value": 0,
+        "always_show": 1,
+        "section": 0,
+        "order": 0,
+        "indentations": 0,
+        "enabled": 0,
+        "unit_id": 11,
+        "name_fr": "energ",
+        "amino_acid_ideal_pattern": 0,
+        "value": 4123.799999999999,
+        "original": 4123.799999999999,
+        "loss": 0,
+        "unit": {
+          "id": 11,
+          "name": "KJ",
+          "name_ar": "كيلوجول",
+          "grams": "1.0000000000"
+        }
+      }
+    }
+  }
+}
